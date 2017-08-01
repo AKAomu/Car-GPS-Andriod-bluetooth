@@ -3,17 +3,10 @@ package com.example.user.googleplaylocation;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.location.Location;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.ParcelUuid;
-import android.os.Parcelable;
-import android.support.annotation.RequiresApi;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -22,7 +15,6 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -32,7 +24,6 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -40,11 +31,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Set;
 import java.util.UUID;
 
 
@@ -71,6 +60,9 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     public Button disconnectBluetooth;
     public Button startRecieve;
     public TextView mTextDataReceive;
+    public TextView mTextDataSpeed;
+    public TextView mTextDataBrake;
+    public TextView mTextDataWheel;
     public BluetoothAdapter mAdapter;
     //public String device_name = "1C:DA:27:F5:27:29";
     public String device_name = "80:30:DC:30:69:1E";
@@ -80,6 +72,11 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     private OutputStream outputStream;
     private BluetoothSocket mSocket = null;
     private BluetoothDevice device = null;
+
+    public double mLastSpeed = 0;
+    public double mLastWheel = 0;
+    public double mLastBrake = 0;
+    public double mLastRain = 0;
 
     public enum BT_STATE {UNKNOWN_STATE, CONNECTED_STATE, DISCOVERY_START_STATE, FAILURE_STATE, NULL_ADAPTER};
 
@@ -106,20 +103,24 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         mTextStaus = (TextView) findViewById(R.id.textStaus);
         mTextDataLat = (TextView) findViewById(R.id.textView_dataLat);
         mTextDataLon = (TextView) findViewById(R.id.textView_dataLon);
-        mTextDataStatus = (TextView) findViewById(R.id.textView_DataStatus);
+        mTextDataStatus = (TextView) findViewById(R.id.textView_dataStatus);
         mTextDataReceive = (TextView) findViewById(R.id.textView_dataRecieve);
+        mTextDataSpeed = (TextView) findViewById(R.id.textView_dataSpeed);
+        mTextDataBrake = (TextView) findViewById(R.id.textView_dataBrake);
+        mTextDataWheel = (TextView) findViewById(R.id.textView_dataWheel);
         findViewById(R.id.button_connectBluetooth).setOnClickListener(this);
         findViewById(R.id.button_disconnectBluetooth).setOnClickListener(this);
         findViewById(R.id.button_start).setOnClickListener(this);
 
-        toggleButton(false);
-        startCancelButton(true);
 
         mGoogleApi = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(mCallback)
                 .addOnConnectionFailedListener(mOnFailed)
                 .build();
+
+        toggleButton(false);
+        startCancelButton(true);
 
         mAdapter = BluetoothAdapter.getDefaultAdapter();
 
@@ -201,10 +202,17 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                 mTextDataLon.setText(strLon);
                 mLastLat = lat;
                 mLastLon = lon;
-                data = "https://suyama-project.appspot.com/location?lat="+lat+"&lon="+lon;
-                //data = "http://192.168.0.6:8080/location?lat="+lat+"&lon="+lon;
-                new DataConnect().execute(data);
-                //mTextStaus.append(" OK Location");
+                //data = "https://suyama-project.appspot.com/location?lat="+lat+"&lon="+lon;
+                try{
+                    //data = "http://192.168.43.231:8080/location?lat="+lat+"&lon="+lon;
+                    data = "http://192.168.43.231:8080/insert_car_status?lat="+mLastLat+"&lon="+mLastLon+"&speed="+mLastSpeed+"&speed_brake="+mLastBrake+"&speed_wheel="+mLastWheel+"&rain="+mLastRain;
+                    new DataConnect().execute(data);
+                    //mTextStaus.append(" OK Location");
+                }catch (Exception e) {
+                    e.printStackTrace();
+
+                }
+
             }
                 }
           };
@@ -248,7 +256,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
     }
 
 
-    class DataConnect extends AsyncTask<String, Void, String>{
+    public class DataConnect extends AsyncTask<String, Void, String>{
         @Override
         public String doInBackground(String... args) {
             String response = "";
@@ -259,7 +267,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                 //httpConnect.setDoOutput(true);
                 httpConnect.connect();
                 //mTextDataStatus.setText(httpConnect.getResponseMessage());
-
+                String connect_status = String.valueOf(httpConnect.getResponseCode());
+                mTextDataStatus.setText(connect_status);
             } catch (Exception e) {   }
             return response;
         }
@@ -274,8 +283,6 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
             Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(intent, 1234);
         } else if(mAdapter.isEnabled()) {
-            //mTextDataStatus.setText(mAdapter.getName());
-            //bluetoothConnect();
             mAdapter.cancelDiscovery();
             mAdapter.startDiscovery();
             updateState(BT_STATE.DISCOVERY_START_STATE);
@@ -285,7 +292,7 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
             try {
 
                 Method m = device.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
-                mSocket = (BluetoothSocket) m.invoke(device, 3);
+                mSocket = (BluetoothSocket) m.invoke(device, 1);
                 //mSocket = device.createRfcommSocketToServiceRecord(uuid);
                 Log.i("MyApp", "Created Socket!");
                 updateState(BT_STATE.CONNECTED_STATE);
@@ -323,10 +330,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                 }
 
                 mAdapter.cancelDiscovery();
-                //mTextDataStatus.setText("Socket : Connected");
             }
         } else {
-            //mTextDataStatus.setText("Bluetooth is disabled.");
             Log.e("error", "Bluetooth is disabled.");
             updateState(BT_STATE.NULL_ADAPTER);
         }
@@ -361,31 +366,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         }
     }
 
-    /*private void bluetoothConnect() {
-        mAdapter.cancelDiscovery();
-        mAdapter.startDiscovery();
-        try {
-            device = mAdapter.getRemoteDevice(device_name);
-            Method m = device.getClass().getMethod("createRfcommSocket", new Class[] {int.class});
-            mSocket = (BluetoothSocket) m.invoke(device, 1);
-            //_socket = target.createRfcommSocketToServiceRecord(UUID.fromString(SERIAL_SERVICE));
-            mSocket.connect();
-            Log.i("MyApp", "Connected!");
-            mTextDataStatus.setText("Socket : Connected");
-            toggleButton(true);
-        } catch(Exception exception) {
-            try {
-                mSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            exception.printStackTrace();
-            mTextDataStatus.setText("Bluetooth cannot connect.");
-            Log.e("error", "Bluetooth cannot connect.");
-        }
-    }*/
 
-    class WriteRead implements Runnable {
+    public class WriteRead implements Runnable {
         public final String LOG_TAG = getClass().getName();
 
         private int _start = 0;
@@ -395,6 +377,11 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
         private Writer writer;
 
         public TextView _tvReceive;
+
+        private String speed;
+        private String brake;
+        private String wheel;
+        private String rain;
 
         private final StringBuilder _stringBuilder = new StringBuilder();
 
@@ -414,8 +401,8 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
 
                 switch(_start) {
                     case 1:
-                        Log.i("MyApp", "write green");
-                        writer.write("green\n");
+                        Log.i("MyApp", "start recieve");
+                        writer.write("start");
                         writer.flush();
                         break;
                 }
@@ -428,6 +415,25 @@ public class MainActivity extends AppCompatActivity  implements View.OnClickList
                     } else {
                         _stringBuilder.append(buffer, 0, size);
                         mTextDataReceive.setText(buffer,0,size);
+
+                        speed = String.valueOf(buffer,0,3);
+                        mLastSpeed = Float.valueOf(speed);
+                        mTextDataSpeed.setText(speed);
+
+                        brake = String.valueOf(buffer,4,3);
+                        mLastBrake = Float.valueOf(brake);
+                        mTextDataBrake.setText(brake);
+
+                        wheel = String.valueOf(buffer,0,3);
+                        mLastWheel = Float.valueOf(wheel);
+                        mTextDataWheel.setText(wheel);
+
+                        rain = String.valueOf(buffer,0,3);
+                        mLastRain = Float.valueOf(rain);
+
+                        data = "http://192.168.43.231:8080/insert_car_status?lat="+mLastLat+"&lon="+mLastLon+"&speed="+mLastSpeed+"&speed_brake="+mLastBrake+"&speed_wheel="
+                                +mLastWheel+"&rain="+mLastRain;
+                        new DataConnect().execute(data);
                     }
                 }
             } catch (Exception exception) {

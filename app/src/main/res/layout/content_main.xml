@@ -64,7 +64,7 @@
         android:layout_alignTop="@+id/textView_dataLat" />
 
     <TextView
-        android:id="@+id/textView_DataStatus"
+        android:id="@+id/textView_dataStatus"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBaseline="@+id/textStaus"
@@ -88,6 +88,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp"
         android:text="Connect Bluetooth"
+        android:textStyle="bold"
         android:layout_above="@+id/button_disconnectBluetooth"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
@@ -99,18 +100,18 @@
         android:layout_marginTop="25dp"
         android:text="Start Receive Data"
         android:layout_below="@+id/button_connectBluetooth"
-        android:layout_alignLeft="@+id/textView_DataStatus"
-        android:layout_alignStart="@+id/textView_DataStatus" />
+        android:layout_alignLeft="@+id/textView_dataStatus"
+        android:layout_alignStart="@+id/textView_dataStatus" />
 
     <TextView
         android:id="@+id/textView_dataRecieve"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="17dp"
-        android:text="TextView"
+        android:layout_marginTop="21dp"
+        android:text="Data Recieve"
         android:layout_below="@+id/button_start"
-        android:layout_toRightOf="@+id/textView_dataLat"
-        android:layout_toEndOf="@+id/textView_dataLat" />
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
     <Button
         android:id="@+id/button_disconnectBluetooth"
@@ -122,5 +123,34 @@
         android:layout_alignParentEnd="true"
         android:layout_marginRight="42dp"
         android:layout_marginEnd="42dp" />
+
+    <TextView
+        android:id="@+id/textView_dataSpeed"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_below="@+id/textView_dataRecieve"
+        android:layout_marginTop="19dp"
+        android:text="Speed" />
+
+    <TextView
+        android:id="@+id/textView_dataBrake"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBaseline="@+id/textView_dataRecieve"
+        android:layout_alignBottom="@+id/textView_dataRecieve"
+        android:layout_alignEnd="@+id/button_start"
+        android:layout_alignRight="@+id/button_start"
+        android:text="Brake" />
+
+    <TextView
+        android:id="@+id/textView_dataWheel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/textView_dataSpeed"
+        android:layout_alignLeft="@+id/textView_dataBrake"
+        android:layout_alignStart="@+id/textView_dataBrake"
+        android:text="Wheel" />
 
 </RelativeLayout>
